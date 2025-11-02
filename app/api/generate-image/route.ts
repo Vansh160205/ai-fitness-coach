@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { ImageGenerationRequest } from '@/types'
 
 export async function POST(request: NextRequest) {
+  let prompt = ''
+  let type: 'exercise' | 'food' = 'exercise'
+
   try {
-    const { prompt, type }: ImageGenerationRequest = await request.json()
+    const body: ImageGenerationRequest = await request.json()
+    prompt = body.prompt
+    type = body.type
 
     if (!prompt || !type) {
       return NextResponse.json(
