@@ -12,55 +12,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('🖼️ Image Generation Request')
+    console.log('Prompt:', prompt)
+    console.log('Type:', type)
+
+    // Create enhanced prompts for better AI image quality
     const enhancedPrompt =
       type === 'exercise'
-        ? `professional fitness photography, person performing ${prompt}, proper form, modern gym environment, athletic, high quality, realistic lighting`
-        : `professional food photography, ${prompt}, beautifully plated, appetizing, restaurant quality, natural lighting, high resolution`
+        ? `professional fitness photography, athletic person performing ${prompt} exercise, correct form, modern gym environment, high quality, 4k resolution, dynamic pose, proper lighting`
+        : `professional food photography, delicious ${prompt}, beautifully plated on elegant white plate, restaurant quality presentation, natural lighting, appetizing, high resolution, 4k, vibrant colors`
 
-    // Try Replicate first if API token exists
-    if (process.env.REPLICATE_API_TOKEN) {
-      try {
-        const Replicate = require('replicate')
-        const replicate = new Replicate({
-          auth: process.env.REPLICATE_API_TOKEN,
-        })
+    console.log('Enhanced prompt:', enhancedPrompt)
 
-        const output = (await replicate.run(
-          'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
-          {
-            input: {
-              prompt: enhancedPrompt,
-              negative_prompt: 'ugly, blurry, low quality, distorted, deformed',
-              num_outputs: 1,
-              width: 1024,
-              height: 1024,
-            },
-          }
-        )) as string[]
-
-        const imageUrl = output[0]
-        return NextResponse.json({ imageUrl })
-      } catch (replicateError) {
-        console.error('Replicate failed, falling back to Pollinations AI:', replicateError)
-      }
-    }
-
-    // Fallback to FREE Pollinations AI (no API key needed!)
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+    // Using Pollinations AI - 100% FREE, no API key needed
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
       enhancedPrompt
-    )}?width=1024&height=1024&nologo=true&enhance=true`
+    )}?width=1024&height=1024&nologo=true&enhance=true&model=flux`
 
-    return NextResponse.json({ imageUrl: pollinationsUrl })
+    console.log('✅ Image URL generated successfully')
+    console.log('URL:', imageUrl)
 
-  } catch (error) {
-    console.error('Error generating image:', error)
+    return NextResponse.json({ 
+      imageUrl,
+      service: 'Pollinations AI (Flux)',
+      success: true
+    })
 
-    // Final fallback - placeholder
-    const { prompt, type } = await request.json()
-    const placeholderUrl = `https://via.placeholder.com/1024/${
+  } catch (error: any) {
+    console.error('❌ Image generation error:', error.message)
+    
+    // Fallback to placeholder if something goes wrong
+    const fallbackUrl = `https://via.placeholder.com/1024/${
       type === 'exercise' ? '6366f1' : '10b981'
     }/ffffff?text=${encodeURIComponent(prompt || 'Image')}`
 
-    return NextResponse.json({ imageUrl: placeholderUrl })
+    return NextResponse.json({ 
+      imageUrl: fallbackUrl,
+      service: 'Placeholder',
+      error: error.message,
+      success: false
+    })
   }
 }
